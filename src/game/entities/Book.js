@@ -175,14 +175,14 @@ export class Book extends Entity {
   
   getColorHex() {
     const colors = {
-      red: '#ff4444',
-      blue: '#4444ff',
-      green: '#44ff44',
-      yellow: '#ffff44',
-      purple: '#ff44ff',
-      orange: '#ff8844'
+      red: '#ff6b6b',      // Coral red
+      blue: '#4ecdc4',     // Teal blue
+      green: '#45b7d1',    // Sky blue
+      yellow: '#f9ca24',   // Golden yellow
+      purple: '#6c5ce7',   // Purple
+      orange: '#fd79a8'    // Pink
     };
-    return colors[this.color] || '#888888';
+    return colors[this.color] || '#a0a0a0';
   }
   
   pickup(holder) {

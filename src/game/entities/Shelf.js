@@ -62,15 +62,20 @@ export class Shelf extends Entity {
         this.height
       );
     } else {
-      // Fallback rendering
-      ctx.fillStyle = '#654321';
+      // Fallback rendering - Computer/tech colors
+      ctx.fillStyle = '#f0f0f0'; // Light gray/white base
       ctx.fillRect(this.x, this.y, this.width, this.height);
       
-      // Shelf boards
-      ctx.fillStyle = '#543210';
+      // Shelf boards - darker gray for contrast
+      ctx.fillStyle = '#d0d0d0';
       ctx.fillRect(this.x, this.y + 20, this.width, 4);
       ctx.fillRect(this.x, this.y + 44, this.width, 4);
       ctx.fillRect(this.x, this.y + 68, this.width, 4);
+      
+      // Add some tech-style highlights
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(this.x, this.y, this.width, 2); // Top highlight
+      ctx.fillRect(this.x, this.y + 2, 2, this.height - 2); // Left highlight
     }
     
     // Draw color indicator
@@ -154,14 +159,14 @@ export class Shelf extends Entity {
   
   getColorHex() {
     const colors = {
-      red: '#ff4444',
-      blue: '#4444ff',
-      green: '#44ff44',
-      yellow: '#ffff44',
-      purple: '#ff44ff',
-      orange: '#ff8844'
+      red: '#ff6b6b',      // Coral red
+      blue: '#4ecdc4',     // Teal blue
+      green: '#45b7d1',    // Sky blue
+      yellow: '#f9ca24',   // Golden yellow
+      purple: '#6c5ce7',   // Purple
+      orange: '#fd79a8'    // Pink
     };
-    return colors[this.color] || '#888888';
+    return colors[this.color] || '#a0a0a0';
   }
   
   hasEmptySlots() {
