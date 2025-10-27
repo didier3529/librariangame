@@ -194,7 +194,7 @@ export class Kid extends Entity {
     
     // When hitting edges, turn toward center where shelves are
     if (state.worldWidth && state.worldHeight) {
-      const margin = 10;
+      const margin = 20; // Increased margin for larger character
       if (this.x <= margin || this.x >= state.worldWidth - this.width - margin ||
           this.y <= margin || this.y >= state.worldHeight - this.height - margin) {
         // Turn toward center
@@ -568,7 +568,7 @@ export class Kid extends Entity {
     // Check collisions with shelves (only nearby ones)
     let canMoveX = true;
     let canMoveY = true;
-    const checkRadius = 100; // Only check shelves within this radius
+    const checkRadius = 150; // Only check shelves within this radius - increased for larger character
     
     for (const shelf of state.shelves) {
       // Quick bounds check
@@ -596,21 +596,28 @@ export class Kid extends Entity {
     if (canMoveX) {
       this.x = newX;
     } else {
-      // Bounce off in opposite direction
-      this.vx = -this.vx * 0.5;
+      // Bounce off in opposite direction with less aggressive response
+      this.vx = -this.vx * 0.3;
       if (this.state === 'wandering') {
-        this.direction = Math.PI - this.direction;
+        this.direction = Math.PI - this.direction + (Math.random() - 0.5) * 0.5;
       }
     }
     
     if (canMoveY) {
       this.y = newY;
     } else {
-      // Bounce off in opposite direction
-      this.vy = -this.vy * 0.5;
+      // Bounce off in opposite direction with less aggressive response
+      this.vy = -this.vy * 0.3;
       if (this.state === 'wandering') {
-        this.direction = -this.direction;
+        this.direction = -this.direction + (Math.random() - 0.5) * 0.5;
       }
+    }
+    
+    // If both X and Y movement are blocked, try to get unstuck
+    if (!canMoveX && !canMoveY && this.state === 'wandering') {
+      this.direction = Math.random() * Math.PI * 2;
+      this.vx = Math.cos(this.direction) * this.speed * 0.5;
+      this.vy = Math.sin(this.direction) * this.speed * 0.5;
     }
   }
   
