@@ -2,7 +2,7 @@ import { Entity } from './Entity.js';
 
 export class Kid extends Entity {
   constructor(game, x, y, aggressionLevel = 1) {
-    super(x, y, 32, 40); // Slightly larger for better visibility
+    super(x, y, 48, 60); // Made bigger for better visibility
     this.game = game;
     this.aggressionLevel = aggressionLevel; // 1 = easy, 2 = normal, 3 = aggressive
     
@@ -31,8 +31,8 @@ export class Kid extends Entity {
     this.dropBookMaxTime = aggressionLevel === 1 ? 10 : aggressionLevel === 2 ? 8 : 5;
     
     // Detection ranges
-    this.shelfDetectionRange = 128; // 4 tiles - increased for better shelf seeking
-    this.playerDetectionRange = 96; // 3 tiles
+    this.shelfDetectionRange = 160; // 5 tiles - increased for better shelf seeking
+    this.playerDetectionRange = 120; // 3.75 tiles
     
     // Animation
     this.animationFrame = 0;
