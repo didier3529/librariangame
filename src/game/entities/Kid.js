@@ -42,6 +42,11 @@ export class Kid extends Entity {
     
     // Sound effects
     this.hasPlayedLaughSound = false; // Prevent multiple laugh sounds per flee
+    
+    // Stuck detection
+    this.stuckTimer = 0;
+    this.lastPosition = { x: this.x, y: this.y };
+    this.stuckThreshold = 2.0; // seconds
   }
   
   update(deltaTime) {
@@ -61,6 +66,26 @@ export class Kid extends Entity {
       case 'stealing':
         this.updateStealing(deltaTime);
         break;
+    }
+    
+    // Check for stuck condition
+    const distanceMoved = Math.sqrt(
+      Math.pow(this.x - this.lastPosition.x, 2) + 
+      Math.pow(this.y - this.lastPosition.y, 2)
+    );
+    
+    if (distanceMoved < 1) { // Less than 1 pixel movement
+      this.stuckTimer += deltaTime;
+    } else {
+      this.stuckTimer = 0;
+      this.lastPosition = { x: this.x, y: this.y };
+    }
+    
+    // If stuck for too long, try to get unstuck
+    if (this.stuckTimer > this.stuckThreshold) {
+      console.log('Kid is stuck, attempting to get unstuck');
+      this.getUnstuck();
+      this.stuckTimer = 0;
     }
     
     // Update animation
@@ -675,34 +700,60 @@ export class Kid extends Entity {
     const state = this.game.stateManager.currentState;
     if (!state) return;
     
-    // If near edges, move towards center
+    console.log('Getting unstuck at position:', this.x, this.y);
+    
+    // Try multiple strategies to get unstuck
+    const strategies = [
+      // Strategy 1: Move towards center
+      () => {
+        const centerX = state.worldWidth / 2;
+        const centerY = state.worldHeight / 2;
+        const dx = centerX - this.x;
+        const dy = centerY - this.y;
+        this.direction = Math.atan2(dy, dx);
+      },
+      // Strategy 2: Random direction
+      () => {
+        this.direction = Math.random() * Math.PI * 2;
+      },
+      // Strategy 3: Move away from current position
+      () => {
+        this.direction = Math.atan2(
+          Math.random() - 0.5, 
+          Math.random() - 0.5
+        );
+      }
+    ];
+    
+    // Try a random strategy
+    const strategy = strategies[Math.floor(Math.random() * strategies.length)];
+    strategy();
+    
+    // Add some randomness to the direction
+    this.direction += (Math.random() - 0.5) * Math.PI / 2;
+    
+    // Force movement with higher speed temporarily
+    this.vx = Math.cos(this.direction) * this.speed * 1.5;
+    this.vy = Math.sin(this.direction) * this.speed * 1.5;
+    
+    // If really stuck at edges, teleport to a safer position
     if (state.worldWidth && state.worldHeight) {
-      const centerX = state.worldWidth / 2;
-      const centerY = state.worldHeight / 2;
-      
-      // Calculate direction towards center
-      const dx = centerX - this.x;
-      const dy = centerY - this.y;
-      this.direction = Math.atan2(dy, dx);
-      
-      // Add some randomness
-      this.direction += (Math.random() - 0.5) * Math.PI / 4;
-      
-      // Force movement
-      this.vx = Math.cos(this.direction) * this.speed;
-      this.vy = Math.sin(this.direction) * this.speed;
-      
-      // Try to teleport slightly if really stuck
       if (this.x < 50 || this.x > state.worldWidth - 50 - this.width ||
           this.y < 50 || this.y > state.worldHeight - 50 - this.height) {
-        this.x = Math.max(100, Math.min(state.worldWidth - 100 - this.width, this.x));
-        this.y = Math.max(100, Math.min(state.worldHeight - 100 - this.height, this.y));
+        console.log('Teleporting kid to safer position');
+        this.x = Math.max(100, Math.min(state.worldWidth - 100 - this.width, 
+          Math.random() * (state.worldWidth - 200) + 100));
+        this.y = Math.max(100, Math.min(state.worldHeight - 100 - this.height, 
+          Math.random() * (state.worldHeight - 200) + 100));
       }
     }
     
     // Reset state to wandering
     this.state = 'wandering';
     this.target = null;
+    this.stuckTimer = 0;
+    
+    console.log('Unstuck complete, new direction:', this.direction, 'velocity:', this.vx, this.vy);
   }
   
   playLaughingSound() {
