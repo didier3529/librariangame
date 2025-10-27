@@ -1,8 +1,8 @@
-import { State } from './State.js';
-import { Player } from '../entities/Player.js';
 import { Book } from '../entities/Book.js';
-import { Shelf } from '../entities/Shelf.js';
 import { Kid } from '../entities/Kid.js';
+import { Player } from '../entities/Player.js';
+import { Shelf } from '../entities/Shelf.js';
+import { State } from './State.js';
 
 export class PlayingState extends State {
   constructor(game) {
