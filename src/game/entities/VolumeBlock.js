@@ -1,19 +1,19 @@
 import { Entity } from './Entity.js';
 
-export class Book extends Entity {
+export class VolumeBlock extends Entity {
   constructor(game, x, y, color) {
     super(x, y, 16, 20);
     this.game = game;
     
-    // Book properties
+    // Volume block properties
     this.color = color; // Matches shelf color
     this.isHeld = false;
     this.isShelved = false;
-    this.holder = null; // Entity holding this book
-    this.shelf = null; // Shelf this book belongs to
+    this.holder = null; // Entity holding this volume block
+    this.shelf = null; // Shelf this volume block belongs to
     
     // Unique ID for tracking
-    this.id = `book-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this.id = `volumeBlock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
     // Physics
     this.friction = 0.9;
@@ -39,8 +39,8 @@ export class Book extends Entity {
   }
   
   update(deltaTime) {
-    // Skip physics for held books, but not shelved books
-    // (shelved books might have been removed but not yet picked up)
+    // Skip physics for held volume blocks, but not shelved volume blocks
+    // (shelved volume blocks might have been removed but not yet picked up)
     if (this.isHeld) {
       return;
     }
@@ -62,12 +62,12 @@ export class Book extends Entity {
       const state = this.game.stateManager.currentState;
       if (state && state.shelves) {
         for (const shelf of state.shelves) {
-          // Check if book overlaps with shelf
+          // Check if volume block overlaps with shelf
           if (!(this.x + this.width < shelf.x || 
                 this.x > shelf.x + shelf.width ||
                 this.y + this.height < shelf.y || 
                 this.y > shelf.y + shelf.height)) {
-            // Book collided with shelf, bounce it away
+            // Volume block collided with shelf, bounce it away
             this.x = oldX;
             this.y = oldY;
             
@@ -112,7 +112,7 @@ export class Book extends Entity {
   render(ctx, interpolation) {
     if (!this.visible) return;
     
-    const sprite = this.game.assetLoader.getImage('book');
+    const sprite = this.game.assetLoader.getImage('volumeBlock');
     
     // Draw glow effect if on floor
     if (!this.isHeld && !this.isShelved) {
@@ -143,7 +143,7 @@ export class Book extends Entity {
       }
     }
     
-    // Draw book sprite (or fallback)
+    // Draw volume block sprite (or fallback)
     if (sprite) {
       this.game.renderer.drawSprite(
         sprite,

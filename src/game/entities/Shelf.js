@@ -8,7 +8,7 @@ export class Shelf extends Entity {
     // Shelf properties
     this.color = color;
     this.capacity = capacity;
-    this.books = new Array(capacity).fill(null); // Fixed-size array for books
+    this.volumeBlocks = new Array(capacity).fill(null); // Fixed-size array for volume blocks
     
     // Visual properties
     this.emptySlotGlow = 0;
@@ -26,15 +26,15 @@ export class Shelf extends Entity {
   update(deltaTime) {
     // Update empty slot glow
     if (this.hasEmptySlots()) {
-      // Check if player has matching books
+      // Check if player has matching volume blocks
       const state = this.game.stateManager.currentState;
-      const playerHasMatchingBook = state && state.player && 
-        state.player.carriedBooks.some(book => book.color === this.color);
+      const playerHasMatchingVolumeBlock = state && state.player && 
+        state.player.carriedVolumeBlocks.some(volumeBlock => volumeBlock.color === this.color);
       
-      // Glow more intensely if player has matching books
-      const glowSpeed = playerHasMatchingBook ? 4 : 2;
-      const maxGlow = playerHasMatchingBook ? 1 : 0.7;
-      const minGlow = playerHasMatchingBook ? 0.5 : 0.3;
+      // Glow more intensely if player has matching volume blocks
+      const glowSpeed = playerHasMatchingVolumeBlock ? 4 : 2;
+      const maxGlow = playerHasMatchingVolumeBlock ? 1 : 0.7;
+      const minGlow = playerHasMatchingVolumeBlock ? 0.5 : 0.3;
       
       this.emptySlotGlow += this.emptySlotGlowDirection * deltaTime * glowSpeed;
       if (this.emptySlotGlow >= maxGlow) {
@@ -62,20 +62,25 @@ export class Shelf extends Entity {
         this.height
       );
     } else {
-      // Fallback rendering - Computer/tech colors
-      ctx.fillStyle = '#f0f0f0'; // Light gray/white base
+      // Fallback rendering - MODERN DARK THEME
+      // Main shelf body - dark charcoal
+      ctx.fillStyle = '#1a1a1a';
       ctx.fillRect(this.x, this.y, this.width, this.height);
       
-      // Shelf boards - darker gray for contrast
-      ctx.fillStyle = '#d0d0d0';
+      // Shelf boards - slightly lighter charcoal
+      ctx.fillStyle = '#2d2d2d';
       ctx.fillRect(this.x, this.y + 20, this.width, 4);
       ctx.fillRect(this.x, this.y + 44, this.width, 4);
       ctx.fillRect(this.x, this.y + 68, this.width, 4);
       
-      // Add some tech-style highlights
-      ctx.fillStyle = '#ffffff';
+      // Modern highlights - subtle gray gradients
+      ctx.fillStyle = '#404040';
       ctx.fillRect(this.x, this.y, this.width, 2); // Top highlight
       ctx.fillRect(this.x, this.y + 2, 2, this.height - 2); // Left highlight
+      
+      // Add subtle inner shadow effect
+      ctx.fillStyle = '#0f0f0f';
+      ctx.fillRect(this.x + 2, this.y + 2, this.width - 4, this.height - 4);
     }
     
     // Draw color indicator
@@ -97,7 +102,7 @@ export class Shelf extends Entity {
       let slotIndex = 0;
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < slotsPerRow; col++) {
-          if (slotIndex < this.capacity && !this.books[slotIndex]) {
+          if (slotIndex < this.capacity && !this.volumeBlocks[slotIndex]) {
             const slotX = this.x + col * slotWidth + 4;
             const slotY = this.y + 24 + row * 24;
             
@@ -117,8 +122,8 @@ export class Shelf extends Entity {
     
     ctx.restore();
     
-    // Draw books on shelf
-    this.renderBooks(ctx);
+    // Draw volume blocks on shelf
+    this.renderVolumeBlocks(ctx);
     
     // Draw capacity indicator
     ctx.save();
@@ -126,34 +131,34 @@ export class Shelf extends Entity {
     ctx.font = '12px Arial';
     ctx.textAlign = 'center';
     ctx.fillText(
-      `${this.books.filter(b => b !== null).length}/${this.capacity}`,
+      `${this.volumeBlocks.filter(v => v !== null).length}/${this.capacity}`,
       this.getCenterX(),
       this.y + this.height + 10
     );
     ctx.restore();
   }
   
-  renderBooks(ctx) {
+  renderVolumeBlocks(ctx) {
     const slotsPerRow = 3;
     const slotWidth = this.width / slotsPerRow;
     
-    this.books.forEach((book, index) => {
-      if (!book) return;
+    this.volumeBlocks.forEach((volumeBlock, index) => {
+      if (!volumeBlock) return;
       
-      // Validate book state
-      if (!book.isShelved || book.shelf !== this) {
-        // Clean up invalid book reference silently
-        this.books[index] = null;
+      // Validate volume block state
+      if (!volumeBlock.isShelved || volumeBlock.shelf !== this) {
+        // Clean up invalid volume block reference silently
+        this.volumeBlocks[index] = null;
         return;
       }
       
       const row = Math.floor(index / slotsPerRow);
       const col = index % slotsPerRow;
       
-      // Position book on shelf
-      book.x = this.x + col * slotWidth + (slotWidth - book.width) / 2;
-      book.y = this.y + 24 + row * 24;
-      book.render(ctx, 1);
+      // Position volume block on shelf
+      volumeBlock.x = this.x + col * slotWidth + (slotWidth - volumeBlock.width) / 2;
+      volumeBlock.y = this.y + 24 + row * 24;
+      volumeBlock.render(ctx, 1);
     });
   }
   
@@ -170,60 +175,60 @@ export class Shelf extends Entity {
   }
   
   hasEmptySlots() {
-    // Count actual books (not null entries)
-    const bookCount = this.books.filter(book => book !== null).length;
-    return bookCount < this.capacity;
+    // Count actual volume blocks (not null entries)
+    const volumeBlockCount = this.volumeBlocks.filter(volumeBlock => volumeBlock !== null).length;
+    return volumeBlockCount < this.capacity;
   }
   
-  addBook(book) {
-    if (!this.hasEmptySlots() || book.color !== this.color) {
+  addVolumeBlock(volumeBlock) {
+    if (!this.hasEmptySlots() || volumeBlock.color !== this.color) {
       return false;
     }
     
     // Find first empty slot
     let slotIndex = 0;
-    while (slotIndex < this.capacity && this.books[slotIndex]) {
+    while (slotIndex < this.capacity && this.volumeBlocks[slotIndex]) {
       slotIndex++;
     }
     
     if (slotIndex < this.capacity) {
-      this.books[slotIndex] = book;
-      book.shelve(this);
+      this.volumeBlocks[slotIndex] = volumeBlock;
+      volumeBlock.shelve(this);
       return true;
     }
     
     return false;
   }
   
-  removeBook(index) {
-    if (index >= 0 && index < this.books.length && this.books[index]) {
-      const book = this.books[index];
-      this.books[index] = null;
-      book.unshelve();
-      return book;
+  removeVolumeBlock(index) {
+    if (index >= 0 && index < this.volumeBlocks.length && this.volumeBlocks[index]) {
+      const volumeBlock = this.volumeBlocks[index];
+      this.volumeBlocks[index] = null;
+      volumeBlock.unshelve();
+      return volumeBlock;
     }
     return null;
   }
   
-  removeRandomBook() {
-    // Get indices of all books on shelf
-    const bookIndices = [];
-    for (let i = 0; i < this.books.length; i++) {
-      if (this.books[i]) {
-        bookIndices.push(i);
+  removeRandomVolumeBlock() {
+    // Get indices of all volume blocks on shelf
+    const volumeBlockIndices = [];
+    for (let i = 0; i < this.volumeBlocks.length; i++) {
+      if (this.volumeBlocks[i]) {
+        volumeBlockIndices.push(i);
       }
     }
     
-    if (bookIndices.length === 0) {
+    if (volumeBlockIndices.length === 0) {
       return null;
     }
     
-    // Remove random book
-    const randomIndex = bookIndices[Math.floor(Math.random() * bookIndices.length)];
-    return this.removeBook(randomIndex);
+    // Remove random volume block
+    const randomIndex = volumeBlockIndices[Math.floor(Math.random() * volumeBlockIndices.length)];
+    return this.removeVolumeBlock(randomIndex);
   }
   
   getEmptySlotCount() {
-    return this.capacity - this.books.filter(book => book !== null).length;
+    return this.capacity - this.volumeBlocks.filter(volumeBlock => volumeBlock !== null).length;
   }
 }

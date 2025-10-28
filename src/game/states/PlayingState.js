@@ -1,7 +1,7 @@
-import { Book } from '../entities/Book.js';
 import { Kid } from '../entities/Kid.js';
 import { Player } from '../entities/Player.js';
 import { Shelf } from '../entities/Shelf.js';
+import { VolumeBlock } from '../entities/VolumeBlock.js';
 import { State } from './State.js';
 
 export class PlayingState extends State {
@@ -11,11 +11,11 @@ export class PlayingState extends State {
     console.log(`[RESTART DEBUG] Creating new PlayingState instance: ${this.instanceId}`);
     this.player = null;
     this.kids = [];
-    this.books = [];
+    this.volumeBlocks = [];
     this.shelves = [];
     this.particles = [];
     
-    // World bounds - minimal area just for bookshelves
+    // World bounds - minimal area just for volume block shelves
     // Shelves: 8 cols, last shelf at x = 320 + 7*160 = 1440, shelf width = 64
     // So rightmost edge = 1440 + 64 = 1504
     // Shelves: 4 rows, last shelf at y = 240 + 3*200 = 840, shelf height = 96
@@ -51,10 +51,12 @@ export class PlayingState extends State {
     this.shelfSound = null;
     
     this.spawnPoints = [
-      { x: 50, y: 520 }, // Left entrance
-      { x: 1550, y: 520 }, // Right entrance  
-      { x: 800, y: 50 }, // Top entrance
-      { x: 800, y: 990 } // Bottom entrance
+      { x: 400, y: 300 }, // Middle-left area - away from shelves but in center region
+      { x: 1200, y: 300 }, // Middle-right area - away from shelves but in center region
+      { x: 400, y: 700 }, // Middle-left bottom area - away from shelves but in center region
+      { x: 1200, y: 700 }, // Middle-right bottom area - away from shelves but in center region
+      { x: 800, y: 200 }, // Top center area - away from shelves but in center region
+      { x: 800, y: 800 } // Bottom center area - away from shelves but in center region
     ];
   }
   
@@ -64,7 +66,7 @@ export class PlayingState extends State {
     
     // Clear any existing entities first to prevent accumulation
     this.kids = [];
-    this.books = [];
+    this.volumeBlocks = [];
     this.particles = [];
     this.shelves = [];
     
@@ -79,8 +81,8 @@ export class PlayingState extends State {
       targetTime: 30 * 60,
       isPaused: false,
       // Stats tracking
-      booksCollected: 0,
-      booksShelved: 0,
+      volumeBlocksCollected: 0,
+      volumeBlocksShelved: 0,
       kidsRepelled: 0
     };
     
@@ -140,7 +142,7 @@ export class PlayingState extends State {
   exit() {
     // Clean up
     this.kids = [];
-    this.books = [];
+    this.volumeBlocks = [];
     this.particles = [];
     this.shelves = [];
     
@@ -197,7 +199,9 @@ export class PlayingState extends State {
     console.log(`[RESTART DEBUG] Before spawning: kids.length = ${this.kids.length}`);
     for (let i = 0; i < initialKids; i++) {
       const spawnPoint = this.spawnPoints[Math.floor(Math.random() * this.spawnPoints.length)];
+      console.log(`[SPAWN DEBUG] Spawning kid ${i+1} at position:`, spawnPoint);
       const kid = new Kid(this.game, spawnPoint.x, spawnPoint.y, 1); // Easy kid
+      console.log(`[SPAWN DEBUG] Kid ${i+1} created with position:`, {x: kid.x, y: kid.y, width: kid.width, height: kid.height});
       this.kids.push(kid);
     }
     console.log(`[RESTART DEBUG] After spawning: kids.length = ${this.kids.length}`);
@@ -239,7 +243,7 @@ export class PlayingState extends State {
       return;
     }
     
-    // Update chaos (placeholder - will be based on books on floor)
+    // Update chaos (placeholder - will be based on volume blocks on floor)
     this.updateChaos(deltaTime);
     
     // Check lose conditions
@@ -258,9 +262,9 @@ export class PlayingState extends State {
       shelf.update(deltaTime);
     }
     
-    // Update books
-    for (const book of this.books) {
-      book.update(deltaTime);
+    // Update volume blocks
+    for (const volumeBlock of this.volumeBlocks) {
+      volumeBlock.update(deltaTime);
     }
     
     // Update kids
@@ -277,21 +281,21 @@ export class PlayingState extends State {
     // Update kid spawning
     this.updateKidSpawning(deltaTime);
     
-    // Check book pickup
-    this.checkBookPickup();
+    // Check volume block pickup
+    this.checkVolumeBlockPickup();
     
-    // Check book snatching from kids
-    this.checkBookSnatching();
+    // Check volume block snatching from kids
+    this.checkVolumeBlockSnatching();
     
-    // Check book shelving
-    this.checkBookShelving();
+    // Check volume block shelving
+    this.checkVolumeBlockShelving();
     
     // Update particles
     this.updateParticles(deltaTime);
     
-    // Validate book states (debug)
+    // Validate volume block states (debug)
     if (Math.random() < 0.01) { // Check 1% of frames to avoid spam
-      this.validateBookStates();
+      this.validateVolumeBlockStates();
     }
     
   }
@@ -299,30 +303,30 @@ export class PlayingState extends State {
   updateChaos(deltaTime) {
     const gameData = this.game.gameData;
     
-    // Count books causing chaos (on floor or held by kids)
-    const booksOnFloor = this.books.filter(book => !book.isHeld && !book.isShelved).length;
-    const booksHeldByKids = this.books.filter(book => {
-      return book.isHeld && book.holder && book.holder.constructor.name === 'Kid';
+    // Count volume blocks causing chaos (on floor or held by kids)
+    const volumeBlocksOnFloor = this.volumeBlocks.filter(volumeBlock => !volumeBlock.isHeld && !volumeBlock.isShelved).length;
+    const volumeBlocksHeldByKids = this.volumeBlocks.filter(volumeBlock => {
+      return volumeBlock.isHeld && volumeBlock.holder && volumeBlock.holder.constructor.name === 'Kid';
     }).length;
-    const totalChaosBooks = booksOnFloor + booksHeldByKids;
+    const totalChaosVolumeBlocks = volumeBlocksOnFloor + volumeBlocksHeldByKids;
     
     // Sliding chaos rate based on game progression
     let chaosRate = 0;
-    if (totalChaosBooks > 0) {
+    if (totalChaosVolumeBlocks > 0) {
       // Calculate game time in minutes
       const minutes = gameData.elapsedTime / 60;
       
-      // Determine chaos rate per book based on time
-      let chaosPerBook;
+      // Determine chaos rate per volume block based on time
+      let chaosPerVolumeBlock;
       if (minutes < 3) {
-        chaosPerBook = 0.05; // 0-3 minutes: 0.05% per book per second
+        chaosPerVolumeBlock = 0.05; // 0-3 minutes: 0.05% per volume block per second
       } else if (minutes < 5) {
-        chaosPerBook = 0.03; // 3-5 minutes: 0.03% per book per second
+        chaosPerVolumeBlock = 0.03; // 3-5 minutes: 0.03% per volume block per second
       } else {
-        chaosPerBook = 0.01; // 5+ minutes: 0.01% per book per second
+        chaosPerVolumeBlock = 0.01; // 5+ minutes: 0.01% per volume block per second
       }
       
-      chaosRate = totalChaosBooks * chaosPerBook;
+      chaosRate = totalChaosVolumeBlocks * chaosPerVolumeBlock;
       
       // Apply chaos dampening from upgrades
       const chaosDampening = this.player?.stats?.chaosDampening || 0;
@@ -332,8 +336,8 @@ export class PlayingState extends State {
     
     // Passive chaos decay when low (helps recovery)
     if (gameData.chaosLevel > 0) {
-      if (totalChaosBooks === 0) {
-        // Slow decay when no books are out
+      if (totalChaosVolumeBlocks === 0) {
+        // Slow decay when no volume blocks are out
         gameData.chaosLevel -= 0.1 * deltaTime;
       }
       // Removed passive decay when under 50% - player must actively manage chaos
@@ -370,12 +374,12 @@ export class PlayingState extends State {
       }
     }
     
-    // Render books (only visible ones that are not held or shelved)
-    for (const book of this.books) {
-      if (!book.isHeld && !book.isShelved && 
-          this.isInViewport(book, viewportX - padding, viewportY - padding, 
+    // Render volume blocks (only visible ones that are not held or shelved)
+    for (const volumeBlock of this.volumeBlocks) {
+      if (!volumeBlock.isHeld && !volumeBlock.isShelved && 
+          this.isInViewport(volumeBlock, viewportX - padding, viewportY - padding, 
                            viewportWidth + padding * 2, viewportHeight + padding * 2)) {
-        renderer.addToLayer('entities', book);
+        renderer.addToLayer('entities', volumeBlock);
       }
     }
     
@@ -420,14 +424,14 @@ export class PlayingState extends State {
     const meterY = 20;
     
     // Chaos meter background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillStyle = 'rgba(40, 40, 40, 0.9)';
     ctx.fillRect(meterX - 2, meterY - 2, meterWidth + 4, meterHeight + 4);
     
     // Chaos meter fill
     const chaosPercent = gameData.chaosLevel / gameData.maxChaos;
-    const chaosColor = chaosPercent > 0.8 ? '#ff0000' : 
-                      chaosPercent > 0.6 ? '#ff8800' : 
-                      chaosPercent > 0.4 ? '#ffff00' : '#00ff00';
+    const chaosColor = chaosPercent > 0.8 ? '#ff6b6b' : 
+                      chaosPercent > 0.6 ? '#ffa726' : 
+                      chaosPercent > 0.4 ? '#ffeb3b' : '#4caf50';
     
     ctx.fillStyle = chaosColor;
     ctx.fillRect(meterX, meterY, meterWidth * chaosPercent, meterHeight);
@@ -457,7 +461,7 @@ export class PlayingState extends State {
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.font = 'bold 18px Arial';
-      ctx.fillStyle = '#ffff00'; // Yellow color for visibility
+      ctx.fillStyle = '#ffeb3b'; // Modern yellow color for visibility
       ctx.strokeStyle = '#000';
       ctx.lineWidth = 3;
       
@@ -475,7 +479,7 @@ export class PlayingState extends State {
     const seconds = Math.floor(timeRemaining % 60);
     
     // Timer background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillStyle = 'rgba(40, 40, 40, 0.8)';
     ctx.fillRect(width - 120, 15, 110, 40);
     
     ctx.font = '24px Arial';
@@ -484,12 +488,12 @@ export class PlayingState extends State {
     ctx.fillText(`${minutes}:${seconds.toString().padStart(2, '0')}`, width - 65, 40);
     
     // Kid counter below timer
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillStyle = 'rgba(40, 40, 40, 0.8)';
     ctx.fillRect(width - 120, 60, 110, 35);
     
     ctx.font = '18px Arial';
     ctx.fillStyle = '#fff';
-    ctx.fillText(`Kids: ${this.kids.length}/${this.maxKids}`, width - 65, 82);
+    ctx.fillText(`Bonks: ${this.kids.length}/${this.maxKids}`, width - 65, 82);
     
     // Left Side Panel - Player Stats
     const panelX = 10;
@@ -498,7 +502,7 @@ export class PlayingState extends State {
     const panelHeight = 150; // Reduced since HP is removed
     
     // Panel background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillStyle = 'rgba(40, 40, 40, 0.8)';
     ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
     
     // Level and XP
@@ -513,11 +517,11 @@ export class PlayingState extends State {
     const xpBarWidth = panelWidth - 20;
     const xpBarHeight = 15;
     
-    ctx.fillStyle = '#333';
+    ctx.fillStyle = '#2a2a2a';
     ctx.fillRect(xpBarX, xpBarY, xpBarWidth, xpBarHeight);
     
     const xpPercent = gameData.xp / gameData.xpToNext;
-    ctx.fillStyle = '#4169E1';
+    ctx.fillStyle = '#4caf50';
     ctx.fillRect(xpBarX, xpBarY, xpBarWidth * xpPercent, xpBarHeight);
     
     // XP text
@@ -538,11 +542,11 @@ export class PlayingState extends State {
       const staminaBarWidth = panelWidth - 85;
       const staminaBarHeight = 20;
       
-      ctx.fillStyle = '#333';
+      ctx.fillStyle = '#2a2a2a';
       ctx.fillRect(staminaBarX, staminaBarY, staminaBarWidth, staminaBarHeight);
       
       const staminaPercent = this.player.stats.stamina / this.player.stats.maxStamina;
-      ctx.fillStyle = '#00aaff';
+      ctx.fillStyle = '#2196f3';
       ctx.fillRect(staminaBarX, staminaBarY, staminaBarWidth * staminaPercent, staminaBarHeight);
       
       // Stamina text
@@ -550,15 +554,15 @@ export class PlayingState extends State {
       ctx.textAlign = 'center';
       ctx.fillText(`${Math.floor(this.player.stats.stamina)} / ${this.player.stats.maxStamina}`, staminaBarX + staminaBarWidth / 2, staminaBarY + staminaBarHeight / 2 + 1);
       
-      // Books carried indicator
+      // Volume blocks carried indicator
       ctx.font = '16px Arial';
       ctx.textAlign = 'left';
       ctx.fillStyle = '#fff';
-      ctx.fillText(`Books: ${this.player.carriedBooks.length} / ${this.player.stats.carrySlots}`, panelX + 10, panelY + 105);
+      ctx.fillText(`Sol: ${this.player.carriedVolumeBlocks.length} / ${this.player.stats.carrySlots}`, panelX + 10, panelY + 105);
       
       // Speed indicator (if sprinting)
       if (this.player.isSprinting && this.player.stats.stamina > 0) {
-        ctx.fillStyle = '#ffff00';
+        ctx.fillStyle = '#ffeb3b';
         ctx.fillText('SPRINTING', panelX + 10, panelY + 130);
       }
     }
@@ -743,11 +747,11 @@ export class PlayingState extends State {
         const shelf = new Shelf(this.game, x, y, color);
         this.shelves.push(shelf);
         
-        // Fill shelf to capacity (6 books)
+        // Fill shelf to capacity (6 volume blocks)
         for (let i = 0; i < shelf.capacity; i++) {
-          const book = new Book(this.game, 0, 0, color);
-          shelf.addBook(book);
-          this.books.push(book);
+          const volumeBlock = new VolumeBlock(this.game, 0, 0, color);
+          shelf.addVolumeBlock(volumeBlock);
+          this.volumeBlocks.push(volumeBlock);
         }
         
         shelfIndex++;
@@ -760,7 +764,7 @@ export class PlayingState extends State {
       colorCounts[shelf.color] = (colorCounts[shelf.color] || 0) + 1;
     });
     console.log('[LIBRARY LAYOUT] Shelf color distribution:', colorCounts);
-    console.log('[LIBRARY LAYOUT] Total books per color:', Object.entries(colorCounts).map(([color, count]) => `${color}: ${count * 6}`));
+    console.log('[LIBRARY LAYOUT] Total volume blocks per color:', Object.entries(colorCounts).map(([color, count]) => `${color}: ${count * 6}`));
   }
   
   isPlayerNearShelf(shelf, distance) {
@@ -790,30 +794,30 @@ export class PlayingState extends State {
              playerBottom <= expandedTop);
   }
   
-  checkBookPickup() {
+  checkVolumeBlockPickup() {
     if (!this.player) return;
     
     const pickupRadiusPixels = this.player.stats.pickupRadius * 32;
     const playerCenterX = this.player.getCenterX();
     const playerCenterY = this.player.getCenterY();
     
-    for (const book of this.books) {
-      // Skip if book is already held or shelved
-      if (book.isHeld || book.isShelved) continue;
+    for (const volumeBlock of this.volumeBlocks) {
+      // Skip if volume block is already held or shelved
+      if (volumeBlock.isHeld || volumeBlock.isShelved) continue;
       
       // Check distance
       const distance = Math.sqrt(
-        Math.pow(book.getCenterX() - playerCenterX, 2) +
-        Math.pow(book.getCenterY() - playerCenterY, 2)
+        Math.pow(volumeBlock.getCenterX() - playerCenterX, 2) +
+        Math.pow(volumeBlock.getCenterY() - playerCenterY, 2)
       );
       
       if (distance <= pickupRadiusPixels) {
-        // Try to pick up the book
-        if (this.player.pickupBook(book)) {
-          book.pickup(this.player);
+        // Try to pick up the volume block
+        if (this.player.pickupVolumeBlock(volumeBlock)) {
+          volumeBlock.pickup(this.player);
           
-          // Track book collection
-          this.game.gameData.booksCollected++;
+          // Track volume block collection
+          this.game.gameData.volumeBlocksCollected++;
           
           // Reduce chaos when picking up (balanced with new rates)
           this.game.gameData.chaosLevel -= 0.5; // Much smaller reduction
@@ -829,19 +833,19 @@ export class PlayingState extends State {
     }
   }
   
-  checkBookShelving() {
-    if (!this.player || this.player.carriedBooks.length === 0) return;
+  checkVolumeBlockShelving() {
+    if (!this.player || this.player.carriedVolumeBlocks.length === 0) return;
     
     const returnDistance = this.player.stats.returnRadius * 32;
     
     for (const shelf of this.shelves) {
       // Check if player is near any edge of the shelf
       if (this.isPlayerNearShelf(shelf, returnDistance) && shelf.hasEmptySlots()) {
-        // Try to shelve matching books
-        const book = this.player.shelveBook(shelf);
-        if (book && shelf.addBook(book)) {
-          // Track book shelving
-          this.game.gameData.booksShelved++;
+        // Try to shelve matching volume blocks
+        const volumeBlock = this.player.shelveVolumeBlock(shelf);
+        if (volumeBlock && shelf.addVolumeBlock(volumeBlock)) {
+          // Track volume block shelving
+          this.game.gameData.volumeBlocksShelved++;
           
           // Reduce chaos when shelving (bigger reward for completing the task)
           this.game.gameData.chaosLevel -= 1.0; // Reduced to match new chaos rates
@@ -925,7 +929,7 @@ export class PlayingState extends State {
           const alpha = 1 - (particle.age / particle.lifetime);
           ctx.globalAlpha = alpha;
           ctx.font = 'bold 18px Arial';
-          ctx.fillStyle = '#ffff00';
+          ctx.fillStyle = '#ffeb3b';
           ctx.strokeStyle = '#000';
           ctx.lineWidth = 2;
           ctx.textAlign = 'center';
@@ -938,58 +942,58 @@ export class PlayingState extends State {
     });
   }
   
-  validateBookStates() {
-    const bookStates = {
+  validateVolumeBlockStates() {
+    const volumeBlockStates = {
       shelved: 0,
       held: 0,
       floor: 0,
       invalid: 0
     };
     
-    for (const book of this.books) {
-      if (book.isShelved && book.isHeld) {
-        console.error(`Book ${book.id} is both shelved and held!`);
-        bookStates.invalid++;
-      } else if (book.isShelved) {
-        bookStates.shelved++;
-        // Verify book is actually in a shelf
+    for (const volumeBlock of this.volumeBlocks) {
+      if (volumeBlock.isShelved && volumeBlock.isHeld) {
+        console.error(`Volume block ${volumeBlock.id} is both shelved and held!`);
+        volumeBlockStates.invalid++;
+      } else if (volumeBlock.isShelved) {
+        volumeBlockStates.shelved++;
+        // Verify volume block is actually in a shelf
         let foundInShelf = false;
         for (const shelf of this.shelves) {
-          if (shelf.books.includes(book)) {
+          if (shelf.volumeBlocks.includes(volumeBlock)) {
             foundInShelf = true;
             break;
           }
         }
         if (!foundInShelf) {
-          console.error(`Book ${book.id} marked as shelved but not in any shelf!`);
+          console.error(`Volume block ${volumeBlock.id} marked as shelved but not in any shelf!`);
         }
-      } else if (book.isHeld) {
-        bookStates.held++;
-        if (!book.holder) {
-          console.error(`Book ${book.id} marked as held but has no holder!`);
+      } else if (volumeBlock.isHeld) {
+        volumeBlockStates.held++;
+        if (!volumeBlock.holder) {
+          console.error(`Volume block ${volumeBlock.id} marked as held but has no holder!`);
         }
       } else {
-        bookStates.floor++;
+        volumeBlockStates.floor++;
       }
     }
     
     // Log summary only if there are issues
-    if (bookStates.invalid > 0) {
-      console.log('Book states:', bookStates, 'Total:', this.books.length);
+    if (volumeBlockStates.invalid > 0) {
+      console.log('Volume block states:', volumeBlockStates, 'Total:', this.volumeBlocks.length);
     }
   }
   
-  checkBookSnatching() {
-    if (!this.player || this.player.carriedBooks.length >= this.player.stats.carrySlots) return;
+  checkVolumeBlockSnatching() {
+    if (!this.player || this.player.carriedVolumeBlocks.length >= this.player.stats.carrySlots) return;
     
-    // Use player's repel radius for snatching books from kids
+    // Use player's repel radius for snatching volume blocks from kids
     const snatchRadius = this.player.repelRadius;
     const playerCenterX = this.player.getCenterX();
     const playerCenterY = this.player.getCenterY();
     
     for (const kid of this.kids) {
-      // Check if kid is carrying a book
-      if (!kid.carriedBook) continue;
+      // Check if kid is carrying a volume block
+      if (!kid.carriedVolumeBlock) continue;
       
       // Check distance to kid
       const distance = Math.sqrt(
@@ -998,19 +1002,19 @@ export class PlayingState extends State {
       );
       
       if (distance <= snatchRadius) {
-        // Snatch the book from the kid
-        const book = kid.carriedBook;
+        // Snatch the volume block from the kid
+        const volumeBlock = kid.carriedVolumeBlock;
         
-        // Remove book from kid
-        kid.carriedBook = null;
-        kid.dropBookTimer = 0;
+        // Remove volume block from kid
+        kid.carriedVolumeBlock = null;
+        kid.dropVolumeBlockTimer = 0;
         
-        // Give book to player
-        if (this.player.pickupBook(book)) {
-          book.pickup(this.player);
+        // Give volume block to player
+        if (this.player.pickupVolumeBlock(volumeBlock)) {
+          volumeBlock.pickup(this.player);
           
-          // Track book collection
-          this.game.gameData.booksCollected++;
+          // Track volume block collection
+          this.game.gameData.volumeBlocksCollected++;
           
           // Kid flees after being robbed
           kid.state = 'fleeing';

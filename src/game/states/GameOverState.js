@@ -75,8 +75,8 @@ export class GameOverState extends State {
       timeElapsed: Math.floor(gameData.elapsedTime),
       level: gameData.playerLevel,
       chaosLevel: Math.floor(gameData.chaosLevel),
-      booksCollected: gameData.booksCollected || 0,
-      booksShelved: gameData.booksShelved || 0,
+      volumeBlocksCollected: gameData.volumeBlocksCollected || 0,
+      volumeBlocksShelved: gameData.volumeBlocksShelved || 0,
       kidsRepelled: gameData.kidsRepelled || 0,
     };
   }
@@ -246,8 +246,8 @@ export class GameOverState extends State {
       `Time Survived: ${minutes}:${seconds.toString().padStart(2, '0')}`,
       `Final Level: ${this.stats.level}`,
       `Peak Chaos: ${this.stats.chaosLevel}%`,
-      `Books Collected: ${this.stats.booksCollected}`,
-      `Books Shelved: ${this.stats.booksShelved}`,
+      `Volume Blocks Collected: ${this.stats.volumeBlocksCollected}`,
+      `Volume Blocks Shelved: ${this.stats.volumeBlocksShelved}`,
       `Kids Repelled: ${this.stats.kidsRepelled}`
     ];
     

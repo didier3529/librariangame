@@ -6,6 +6,9 @@ export class Kid extends Entity {
     this.game = game;
     this.aggressionLevel = aggressionLevel; // 1 = easy, 2 = normal, 3 = aggressive
     
+    // Safety check: ensure we don't spawn inside shelves
+    this.ensureSafeSpawnPosition();
+    
     // Randomly select sprite type (1, 2, or 3)
     this.spriteType = Math.floor(Math.random() * 3) + 1;
     
@@ -20,15 +23,15 @@ export class Kid extends Entity {
     this.state = 'wandering'; // wandering, fleeing, stealing
     this.target = null; // Target shelf or escape point
     
-    // Book carrying - scale with aggression
-    this.carriedBook = null;
-    this.bookStealCooldown = 0;
-    this.bookStealCooldownTime = aggressionLevel === 1 ? 4.0 : aggressionLevel === 2 ? 2.5 : 1.5;
-    this.dropBookTimer = 0; // Timer for when to drop carried book
-    this.grabDelay = 0; // Delay before grabbing book from shelf
+    // Volume block carrying - scale with aggression
+    this.carriedVolumeBlock = null;
+    this.volumeBlockStealCooldown = 0;
+    this.volumeBlockStealCooldownTime = aggressionLevel === 1 ? 2.0 : aggressionLevel === 2 ? 1.5 : 1.0;
+    this.dropVolumeBlockTimer = 0; // Timer for when to drop carried volume block
+    this.grabDelay = 0; // Delay before grabbing volume block from shelf
     this.grabDelayTime = aggressionLevel === 1 ? 1.0 : aggressionLevel === 2 ? 0.5 : 0.2;
-    this.dropBookMinTime = aggressionLevel === 1 ? 8 : aggressionLevel === 2 ? 5 : 3;
-    this.dropBookMaxTime = aggressionLevel === 1 ? 10 : aggressionLevel === 2 ? 8 : 5;
+    this.dropVolumeBlockMinTime = aggressionLevel === 1 ? 4 : aggressionLevel === 2 ? 3 : 2;
+    this.dropVolumeBlockMaxTime = aggressionLevel === 1 ? 6 : aggressionLevel === 2 ? 4 : 3;
     
     // Detection ranges
     this.shelfDetectionRange = 160; // 5 tiles - increased for better shelf seeking
@@ -38,16 +41,35 @@ export class Kid extends Entity {
     this.animationFrame = 0;
     this.animationTimer = 0;
     this.facing = 'left'; // Kids face left by default
+    
+    // Stuck detection
+    this.stuckTimer = 0;
     this.isMoving = false;
     
     // Sound effects
     this.hasPlayedLaughSound = false; // Prevent multiple laugh sounds per flee
   }
   
+  ensureSafeSpawnPosition() {
+    const state = this.game.stateManager.currentState;
+    if (!state || !state.shelves) return;
+    
+    // Check if we're colliding with any shelf
+    for (const shelf of state.shelves) {
+      if (this.checkCollision(this.x, this.y, shelf)) {
+        console.log(`[SPAWN SAFETY] Kid spawned inside shelf, moving to safe position`);
+        // Move to a safe position away from shelves
+        this.x = 30; // Move to left edge
+        this.y = 30; // Move to top edge
+        break;
+      }
+    }
+  }
+  
   update(deltaTime) {
     // Update cooldowns
-    if (this.bookStealCooldown > 0) {
-      this.bookStealCooldown -= deltaTime;
+    if (this.volumeBlockStealCooldown > 0) {
+      this.volumeBlockStealCooldown -= deltaTime;
     }
     
     // State machine
@@ -81,14 +103,26 @@ export class Kid extends Entity {
       this.facing = this.vx > 0 ? 'right' : 'left';
     }
     
-    // Update book drop timer if carrying
-    if (this.carriedBook) {
-      this.dropBookTimer += deltaTime;
-      // Drop book after time based on aggression level
-      if (this.dropBookTimer > this.dropBookMinTime + Math.random() * (this.dropBookMaxTime - this.dropBookMinTime)) {
-        this.dropBook();
-        this.dropBookTimer = 0;
-        this.state = 'wandering'; // Go find more books to mess with
+    // Check if stuck (not moving for too long)
+    if (Math.abs(this.vx) < 0.1 && Math.abs(this.vy) < 0.1) {
+      this.stuckTimer += deltaTime;
+      if (this.stuckTimer > 1.0) { // Reduced to 1 second for faster detection
+        console.log(`[KID DEBUG] Kid appears stuck at position:`, {x: this.x, y: this.y, vx: this.vx, vy: this.vy, direction: this.direction});
+        this.direction = Math.random() * Math.PI * 2; // Random direction
+        this.stuckTimer = 0;
+      }
+    } else {
+      this.stuckTimer = 0; // Reset if moving
+    }
+    
+    // Update volume block drop timer if carrying
+    if (this.carriedVolumeBlock) {
+      this.dropVolumeBlockTimer += deltaTime;
+      // Drop volume block after time based on aggression level
+      if (this.dropVolumeBlockTimer > this.dropVolumeBlockMinTime + Math.random() * (this.dropVolumeBlockMaxTime - this.dropVolumeBlockMinTime)) {
+        this.dropVolumeBlock();
+        this.dropVolumeBlockTimer = 0;
+        this.state = 'wandering'; // Go find more volume blocks to mess with
       }
     }
     
@@ -121,8 +155,8 @@ export class Kid extends Entity {
       }
     }
     
-    // Look for shelves with books to steal (only check nearby shelves)
-    if (!this.carriedBook && this.bookStealCooldown <= 0) {
+    // Look for shelves with volume blocks to steal (only check nearby shelves)
+    if (!this.carriedVolumeBlock && this.volumeBlockStealCooldown <= 0) {
       for (const shelf of shelves) {
         // Quick bounds check before expensive distance calculation
         if (Math.abs(shelf.x - this.x) > this.shelfDetectionRange || 
@@ -131,7 +165,7 @@ export class Kid extends Entity {
         }
         
         const distToShelf = this.getDistanceTo(shelf);
-        if (distToShelf < this.shelfDetectionRange && shelf.books.some(b => b !== null)) {
+        if (distToShelf < this.shelfDetectionRange && shelf.volumeBlocks.some(v => v !== null)) {
           this.target = shelf;
           this.state = 'stealing';
           return;
@@ -139,14 +173,14 @@ export class Kid extends Entity {
       }
     }
     
-    // If not carrying a book and cooldown is up, actively seek nearest shelf
-    if (!this.carriedBook && this.bookStealCooldown <= 0 && shelves.length > 0) {
-      // Find nearest shelf with books
+    // If not carrying a volume block and cooldown is up, actively seek nearest shelf
+    if (!this.carriedVolumeBlock && this.volumeBlockStealCooldown <= 0 && shelves.length > 0) {
+      // Find nearest shelf with volume blocks
       let nearestShelf = null;
       let nearestDist = Infinity;
       
       for (const shelf of shelves) {
-        if (shelf.books.some(b => b !== null)) {
+        if (shelf.volumeBlocks.some(v => v !== null)) {
           const dist = this.getDistanceTo(shelf);
           if (dist < nearestDist) {
             nearestDist = dist;
@@ -161,7 +195,7 @@ export class Kid extends Entity {
         const dy = nearestShelf.getCenterY() - this.getCenterY();
         this.direction = Math.atan2(dy, dx);
       } else {
-        // No shelves with books, move toward center
+        // No shelves with volume blocks, move toward center
         this.directionChangeTimer -= deltaTime;
         if (this.directionChangeTimer <= 0) {
           const centerX = state.worldWidth / 2;
@@ -173,10 +207,10 @@ export class Kid extends Entity {
         }
       }
     } else {
-      // Carrying book - move around to spread chaos
+      // Carrying volume block - move around to spread chaos
       this.directionChangeTimer -= deltaTime;
       if (this.directionChangeTimer <= 0) {
-        // Move away from where we picked up the book
+        // Move away from where we picked up the volume block
         if (this.target) {
           const dx = this.getCenterX() - this.target.getCenterX();
           const dy = this.getCenterY() - this.target.getCenterY();
@@ -256,14 +290,14 @@ export class Kid extends Entity {
     // Apply movement with collision detection
     this.applyMovement(deltaTime);
     
-    // Drop book if carrying one (scared)
-    if (this.carriedBook && Math.random() < 2.0 * deltaTime) { // 200% chance per second (almost immediately)
-      this.dropBook();
+    // Drop volume block if carrying one (scared)
+    if (this.carriedVolumeBlock && Math.random() < 2.0 * deltaTime) { // 200% chance per second (almost immediately)
+      this.dropVolumeBlock();
     }
   }
   
   updateStealing(deltaTime) {
-    if (!this.target || this.carriedBook) {
+    if (!this.target || this.carriedVolumeBlock) {
       this.state = 'wandering';
       return;
     }
@@ -298,7 +332,7 @@ export class Kid extends Entity {
       // Apply movement with collision detection
       this.applyMovement(deltaTime);
     } else {
-      // Near shelf (any side), wait a moment then steal a book
+      // Near shelf (any side), wait a moment then steal a volume block
       if (this.grabDelay <= 0) {
         this.grabDelay = this.grabDelayTime; // Grab delay based on aggression
       }
@@ -306,36 +340,39 @@ export class Kid extends Entity {
       this.grabDelay -= deltaTime;
       
       if (this.grabDelay <= 0) {
-        const book = this.target.removeRandomBook();
-        if (book) {
-        // Book has already been removed from shelf and unshelved
+        const volumeBlock = this.target.removeRandomVolumeBlock();
+        if (volumeBlock) {
+        // Volume block has already been removed from shelf and unshelved
         // 50/50 chance: knock to floor or carry away
         if (Math.random() < 0.5) {
-          // Just knock it to the floor
-          // Book is already unshelved by removeRandomBook
-          // Drop book outside of shelf bounds to prevent it landing inside
-          const dropDirection = Math.random() < 0.5 ? -1 : 1; // Left or right
-          book.x = dropDirection < 0 ? 
-            this.target.x - book.width - 10 : // Drop to left of shelf
-            this.target.x + this.target.width + 10; // Drop to right of shelf
-          book.y = this.target.y + this.target.height / 2; // Middle height
-          book.vx = dropDirection * (50 + Math.random() * 50); // Push away from shelf
-          book.vy = Math.random() * 50 + 50;
-          book.visible = true; // Ensure book is visible
+          // Just knock it to the floor - drop it close to the shelf
+          // Volume block is already unshelved by removeRandomVolumeBlock
+          const shelf = this.target;
+          
+          // Drop volume blocks around the shelf they came from
+          const dropRadius = 150; // Increased radius around shelf for volume block placement
+          const randomAngle = Math.random() * Math.PI * 2;
+          const randomDistance = Math.random() * dropRadius;
+          
+          volumeBlock.x = shelf.getCenterX() + Math.cos(randomAngle) * randomDistance - volumeBlock.width / 2;
+          volumeBlock.y = shelf.getCenterY() + Math.sin(randomAngle) * randomDistance - volumeBlock.height / 2;
+          volumeBlock.vx = (Math.random() - 0.5) * 60; // Small random velocity
+          volumeBlock.vy = (Math.random() - 0.5) * 60;
+          volumeBlock.visible = true; // Ensure volume block is visible
         } else {
           // Pick it up and carry it
-          this.carriedBook = book;
-          book.isHeld = true;
-          book.holder = this;
-          book.visible = true; // Ensure book is visible
+          this.carriedVolumeBlock = volumeBlock;
+          volumeBlock.isHeld = true;
+          volumeBlock.holder = this;
+          volumeBlock.visible = true; // Ensure volume block is visible
         }
-          this.bookStealCooldown = this.bookStealCooldownTime;
+          this.volumeBlockStealCooldown = this.volumeBlockStealCooldownTime;
           // Flee after stealing to create chaos elsewhere
           this.state = 'fleeing';
         } else {
-          // No books to steal, go back to wandering
+          // No volume blocks to steal, go back to wandering
           this.state = 'wandering';
-          this.bookStealCooldown = 1; // Short cooldown before trying again
+          this.volumeBlockStealCooldown = 1; // Short cooldown before trying again
         }
         this.target = null;
         this.grabDelay = 0; // Reset grab delay
@@ -439,110 +476,63 @@ export class Kid extends Entity {
       ctx.restore();
     }
     
-    // Draw carried book above head
-    if (this.carriedBook) {
-      // Center book above the kid's actual sprite (accounting for aspect ratio)
-      this.carriedBook.x = this.getCenterX() - this.carriedBook.width / 2;
-      this.carriedBook.y = this.y - this.carriedBook.height - 4;
-      this.carriedBook.render(ctx, interpolation);
+    // Draw carried volume block above head
+    if (this.carriedVolumeBlock) {
+      // Center volume block above the kid's actual sprite (accounting for aspect ratio)
+      this.carriedVolumeBlock.x = this.getCenterX() - this.carriedVolumeBlock.width / 2;
+      this.carriedVolumeBlock.y = this.y - this.carriedVolumeBlock.height - 4;
+      this.carriedVolumeBlock.render(ctx, interpolation);
     }
   }
   
-  dropBook() {
-    if (this.carriedBook) {
-      const book = this.carriedBook;
-      book.isHeld = false;
-      book.holder = null;
-      book.isShelved = false; // CRITICAL: Ensure book is marked as not shelved
-      book.visible = true; // Ensure book remains visible
+  dropVolumeBlock() {
+    if (this.carriedVolumeBlock) {
+      const volumeBlock = this.carriedVolumeBlock;
+      volumeBlock.isHeld = false;
+      volumeBlock.holder = null;
+      volumeBlock.isShelved = false; // CRITICAL: Ensure volume block is marked as not shelved
+      volumeBlock.visible = true; // Ensure volume block remains visible
       
-      // Check if we're near any shelf and adjust drop position
+      // Drop volume blocks close to where they were picked up (near the shelf)
       const state = this.game.stateManager.currentState;
-      let dropX = this.x + (this.width - book.width) / 2;
-      let dropY = this.y + this.height;
       
-      if (state && state.shelves) {
-        // Check against ALL shelves, not just the first collision
-        const safetyMargin = 30; // Increased margin for safety
+      // If we have a target shelf (where we picked up the volume block), drop near it
+      let dropX, dropY;
+      if (this.target) {
+        const shelf = this.target;
+        // Drop volume blocks around the shelf they came from
+        const dropRadius = 180; // Increased radius around shelf for volume block placement
+        const randomAngle = Math.random() * Math.PI * 2;
+        const randomDistance = Math.random() * dropRadius;
         
-        for (const shelf of state.shelves) {
-          // Check if the book's bounding box would overlap with shelf (with margin)
-          const bookLeft = dropX;
-          const bookRight = dropX + book.width;
-          const bookTop = dropY;
-          const bookBottom = dropY + book.height;
-          
-          const shelfLeft = shelf.x - safetyMargin;
-          const shelfRight = shelf.x + shelf.width + safetyMargin;
-          const shelfTop = shelf.y - safetyMargin;
-          const shelfBottom = shelf.y + shelf.height + safetyMargin;
-          
-          // Check for overlap
-          if (!(bookLeft > shelfRight || bookRight < shelfLeft || 
-                bookTop > shelfBottom || bookBottom < shelfTop)) {
-            // Book would overlap with shelf, find safe position
-            
-            // Calculate distances to each side of the shelf
-            const leftDist = Math.abs(this.getCenterX() - shelf.x);
-            const rightDist = Math.abs(this.getCenterX() - (shelf.x + shelf.width));
-            const topDist = Math.abs(this.getCenterY() - shelf.y);
-            const bottomDist = Math.abs(this.getCenterY() - (shelf.y + shelf.height));
-            
-            // Find the closest edge and drop book there
-            const minDist = Math.min(leftDist, rightDist, topDist, bottomDist);
-            
-            if (minDist === leftDist) {
-              dropX = shelf.x - book.width - safetyMargin;
-            } else if (minDist === rightDist) {
-              dropX = shelf.x + shelf.width + safetyMargin;
-            } else if (minDist === topDist) {
-              dropY = shelf.y - book.height - safetyMargin;
-            } else {
-              dropY = shelf.y + shelf.height + safetyMargin;
-            }
-          }
-        }
+        dropX = shelf.getCenterX() + Math.cos(randomAngle) * randomDistance - volumeBlock.width / 2;
+        dropY = shelf.getCenterY() + Math.sin(randomAngle) * randomDistance - volumeBlock.height / 2;
+      } else {
+        // Fallback: drop near current position
+        const dropRadius = 60;
+        const randomAngle = Math.random() * Math.PI * 2;
+        const randomDistance = Math.random() * dropRadius;
+        
+        dropX = this.getCenterX() + Math.cos(randomAngle) * randomDistance - volumeBlock.width / 2;
+        dropY = this.getCenterY() + Math.sin(randomAngle) * randomDistance - volumeBlock.height / 2;
       }
       
-      // Ensure book is dropped within playable bounds
+      // Ensure volume block is dropped within playable bounds
       if (state && state.worldWidth && state.worldHeight) {
-        // Keep book at least 50 pixels from edges
-        const margin = 50;
-        dropX = Math.max(margin, Math.min(state.worldWidth - book.width - margin, dropX));
-        dropY = Math.max(margin, Math.min(state.worldHeight - book.height - margin, dropY));
+        // Keep volume block at least 20 pixels from edges
+        const margin = 20;
+        dropX = Math.max(margin, Math.min(state.worldWidth - volumeBlock.width - margin, dropX));
+        dropY = Math.max(margin, Math.min(state.worldHeight - volumeBlock.height - margin, dropY));
       }
       
-      book.x = dropX;
-      book.y = dropY;
+      volumeBlock.x = dropX;
+      volumeBlock.y = dropY;
       
-      // Give book a little random velocity, but away from shelves
-      // Start with small random velocity
-      book.vx = (Math.random() - 0.5) * 50; // Reduced from 100
-      book.vy = Math.random() * 25 + 25; // Reduced from 50+50
+      // Give volume block a small random velocity
+      volumeBlock.vx = (Math.random() - 0.5) * 40;
+      volumeBlock.vy = (Math.random() - 0.5) * 40;
       
-      // If we adjusted position due to a shelf, add velocity away from it
-      if (state && state.shelves) {
-        for (const shelf of state.shelves) {
-          const distToShelf = Math.sqrt(
-            Math.pow(dropX + book.width/2 - (shelf.x + shelf.width/2), 2) +
-            Math.pow(dropY + book.height/2 - (shelf.y + shelf.height/2), 2)
-          );
-          
-          if (distToShelf < 100) { // If close to a shelf
-            // Add velocity away from shelf center
-            const awayX = (dropX + book.width/2) - (shelf.x + shelf.width/2);
-            const awayY = (dropY + book.height/2) - (shelf.y + shelf.height/2);
-            const awayDist = Math.sqrt(awayX * awayX + awayY * awayY);
-            
-            if (awayDist > 0) {
-              book.vx += (awayX / awayDist) * 30;
-              book.vy += (awayY / awayDist) * 30;
-            }
-          }
-        }
-      }
-      
-      this.carriedBook = null;
+      this.carriedVolumeBlock = null;
     }
   }
   
@@ -597,6 +587,7 @@ export class Kid extends Entity {
       this.x = newX;
     } else {
       // Bounce off in opposite direction with less aggressive response
+      console.log(`[MOVEMENT DEBUG] X movement blocked at position:`, {x: this.x, y: this.y, newX, vx: this.vx});
       this.vx = -this.vx * 0.3;
       if (this.state === 'wandering') {
         this.direction = Math.PI - this.direction + (Math.random() - 0.5) * 0.5;
@@ -607,6 +598,7 @@ export class Kid extends Entity {
       this.y = newY;
     } else {
       // Bounce off in opposite direction with less aggressive response
+      console.log(`[MOVEMENT DEBUG] Y movement blocked at position:`, {x: this.x, y: this.y, newY, vy: this.vy});
       this.vy = -this.vy * 0.3;
       if (this.state === 'wandering') {
         this.direction = -this.direction + (Math.random() - 0.5) * 0.5;

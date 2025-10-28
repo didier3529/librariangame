@@ -1,5 +1,5 @@
-import { State } from './State.js';
 import { PlayingState } from './PlayingState.js';
+import { State } from './State.js';
 
 export class MenuState extends State {
   constructor(game) {
@@ -186,12 +186,20 @@ export class MenuState extends State {
         ctx.drawImage(this.video, drawX, drawY, drawWidth, drawHeight);
       } catch (e) {
         // Fallback to solid color if video fails
-        ctx.fillStyle = '#f5e6d3';
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, '#404040');
+        gradient.addColorStop(0.5, '#2a2a2a');
+        gradient.addColorStop(1, '#1a1a1a');
+        ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
       }
     } else {
       // Fallback background color
-      ctx.fillStyle = '#f5e6d3';
+      const gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, '#404040');
+      gradient.addColorStop(0.5, '#2a2a2a');
+      gradient.addColorStop(1, '#1a1a1a');
+      ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, width, height);
     }
     
@@ -215,17 +223,20 @@ export class MenuState extends State {
       
       if (index === this.selectedIndex) {
         // Highlight selected item with semi-transparent background
-        ctx.fillStyle = 'rgba(139, 69, 19, 0.8)';
+        ctx.fillStyle = 'rgba(100, 100, 100, 0.8)';
         ctx.fillRect(width / 2 - 200, y - 25, 400, 50);
         
-        // Selected text
+        // Selected text with glow effect
         ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+        ctx.shadowBlur = 10;
         ctx.fillText(item.text, width / 2, y);
+        ctx.shadowBlur = 0;
       } else {
         // Non-selected items with shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
         ctx.fillText(item.text, width / 2 + 2, y + 2);
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#e0e0e0';
         ctx.fillText(item.text, width / 2, y);
       }
     });
@@ -261,23 +272,27 @@ export class MenuState extends State {
     };
     
     // Box shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     drawRoundedRect(boxX + 5, boxY + 5, boxWidth, boxHeight, borderRadius);
     ctx.fill();
     
-    // Main box with transparency
-    ctx.fillStyle = 'rgba(245, 230, 211, 0.95)'; // Light brown with 95% opacity
+    // Main box with gradient
+    const boxGradient = ctx.createLinearGradient(boxX, boxY, boxX, boxY + boxHeight);
+    boxGradient.addColorStop(0, 'rgba(60, 60, 60, 0.95)');
+    boxGradient.addColorStop(0.5, 'rgba(40, 40, 40, 0.95)');
+    boxGradient.addColorStop(1, 'rgba(20, 20, 20, 0.95)');
+    ctx.fillStyle = boxGradient;
     drawRoundedRect(boxX, boxY, boxWidth, boxHeight, borderRadius);
     ctx.fill();
     
     // Box border
-    ctx.strokeStyle = '#8B4513';
+    ctx.strokeStyle = '#606060';
     ctx.lineWidth = 3;
     drawRoundedRect(boxX, boxY, boxWidth, boxHeight, borderRadius);
     ctx.stroke();
     
     // Title
-    ctx.fillStyle = '#3d2914';
+    ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 42px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -293,9 +308,9 @@ export class MenuState extends State {
       'P/Escape - Pause',
       '',
       'GAMEPLAY:',
-      '• Pick up books automatically when near them',
-      '• Return books to matching colored shelves',
-      '• Kids will steal books - chase them away!',
+      '• Pick up volume blocks automatically when near them',
+      '• Return volume blocks to matching colored shelves',
+      '• Kids will steal volume blocks - chase them away!',
       '• Keep Chaos below 100% or you lose',
       '• Level up to choose upgrades',
       '',

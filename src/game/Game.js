@@ -1,8 +1,8 @@
 import { GameLoop } from './GameLoop.js';
 import { StateManager } from './states/StateManager.js';
-import { InputManager } from './systems/InputManager.js';
 import { AssetLoader } from './systems/AssetLoader.js';
 import { Camera } from './systems/Camera.js';
+import { InputManager } from './systems/InputManager.js';
 import { Renderer } from './systems/Renderer.js';
 
 export class Game {
@@ -51,8 +51,8 @@ export class Game {
       targetTime: 30 * 60, // 30 minutes in seconds
       isPaused: false,
       // Stats tracking
-      booksCollected: 0,
-      booksShelved: 0,
+      volumeBlocksCollected: 0,
+      volumeBlocksShelved: 0,
       kidsRepelled: 0
     };
   }

@@ -176,11 +176,11 @@ export class AssetLoader {
     // Kid sprite
     this.assets.set('kid', this.createPlaceholderImage(24, 36, '#FF6347', 'K'));
     
-    // Book sprite
-    this.assets.set('book', this.createPlaceholderImage(16, 20, '#8B4513', 'B'));
+    // Volume block sprite
+    this.assets.set('volumeBlock', this.createPlaceholderImage(16, 20, '#404040', 'V'));
     
-    // Shelf sprite
-    this.assets.set('shelf', this.createPlaceholderImage(64, 96, '#654321', 'S'));
+    // Shelf sprite - MODERN DARK THEME
+    this.assets.set('shelf', this.createPlaceholderImage(64, 96, '#1a1a1a', 'S'));
     
     // Floor tiles
     this.assets.set('tiles', this.createPlaceholderImage(32, 32, '#D2691E'));

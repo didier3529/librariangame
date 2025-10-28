@@ -17,7 +17,7 @@ export const UPGRADES = {
   pickupRadius: {
     id: 'pickupRadius',
     name: 'Long Arms',
-    description: 'Increases book pickup radius by 0.1m',
+    description: 'Increases volume block pickup radius by 0.1m',
     icon: '🤲',
     maxLevel: 10,
     effect: (player, level) => {
@@ -29,14 +29,14 @@ export const UPGRADES = {
   
   carrySlots: {
     id: 'carrySlots',
-    name: 'Book Belt',
-    description: 'Carry 1 additional book',
+    name: 'Volume Block Belt',
+    description: 'Carry 1 additional volume block',
     icon: '📚',
     maxLevel: 7,
     effect: (player, level) => {
       player.upgrade('carrySlots', 1);
     },
-    getDescription: (level) => `+${level} Book Slots`
+    getDescription: (level) => `+${level} Volume Block Slots`
   },
   
   stamina: {

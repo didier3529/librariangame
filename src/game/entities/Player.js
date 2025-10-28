@@ -25,8 +25,8 @@ export class Player extends Entity {
     this.sprintMultiplier = 1.5;
     this.isSprinting = false;
     
-    // Books carried
-    this.carriedBooks = [];
+    // Volume blocks carried
+    this.carriedVolumeBlocks = [];
     
     // Animation
     this.facing = 'down'; // up, down, left, right
@@ -290,30 +290,30 @@ export class Player extends Entity {
       ctx.restore();
     }
     
-    // Draw carried books indicator with colors
-    if (this.carriedBooks.length > 0) {
+    // Draw carried volume blocks indicator with colors
+    if (this.carriedVolumeBlocks.length > 0) {
       ctx.save();
       
-      // Draw book count
+      // Draw volume block count
       ctx.fillStyle = '#000';
       ctx.font = 'bold 12px Arial';
       ctx.textAlign = 'center';
       ctx.fillText(
-        `${this.carriedBooks.length}/${this.stats.carrySlots}`,
+        `${this.carriedVolumeBlocks.length}/${this.stats.carrySlots}`,
         this.getCenterX(),
         this.y - 5
       );
       
-      // Draw colored indicators for each book type
-      const bookColors = {};
-      this.carriedBooks.forEach(book => {
-        bookColors[book.color] = (bookColors[book.color] || 0) + 1;
+      // Draw colored indicators for each volume block type
+      const volumeBlockColors = {};
+      this.carriedVolumeBlocks.forEach(volumeBlock => {
+        volumeBlockColors[volumeBlock.color] = (volumeBlockColors[volumeBlock.color] || 0) + 1;
       });
       
       let offsetX = -20;
-      Object.entries(bookColors).forEach(([color, count]) => {
-        // Draw colored circle for each book type
-        const colorHex = this.getBookColorHex(color);
+      Object.entries(volumeBlockColors).forEach(([color, count]) => {
+        // Draw colored circle for each volume block type
+        const colorHex = this.getVolumeBlockColorHex(color);
         ctx.fillStyle = colorHex;
         ctx.strokeStyle = '#000';
         ctx.lineWidth = 1;
@@ -337,32 +337,32 @@ export class Player extends Entity {
     }
   }
   
-  pickupBook(book) {
-    if (this.carriedBooks.length >= this.stats.carrySlots) {
+  pickupVolumeBlock(volumeBlock) {
+    if (this.carriedVolumeBlocks.length >= this.stats.carrySlots) {
       return false;
     }
     
-    this.carriedBooks.push(book);
+    this.carriedVolumeBlocks.push(volumeBlock);
     return true;
   }
   
-  shelveBook(shelf) {
-    // Find a book that matches this shelf's color
-    const bookIndex = this.carriedBooks.findIndex(
-      book => book.color === shelf.color
+  shelveVolumeBlock(shelf) {
+    // Find a volume block that matches this shelf's color
+    const volumeBlockIndex = this.carriedVolumeBlocks.findIndex(
+      volumeBlock => volumeBlock.color === shelf.color
     );
     
-    if (bookIndex !== -1) {
-      const book = this.carriedBooks.splice(bookIndex, 1)[0];
-      return book;
+    if (volumeBlockIndex !== -1) {
+      const volumeBlock = this.carriedVolumeBlocks.splice(volumeBlockIndex, 1)[0];
+      return volumeBlock;
     }
     
     return null;
   }
   
-  dropAllBooks() {
-    const dropped = [...this.carriedBooks];
-    this.carriedBooks = [];
+  dropAllVolumeBlocks() {
+    const dropped = [...this.carriedVolumeBlocks];
+    this.carriedVolumeBlocks = [];
     return dropped;
   }
   
@@ -424,7 +424,7 @@ export class Player extends Entity {
              playerBottom <= entityTop);
   }
   
-  getBookColorHex(color) {
+  getVolumeBlockColorHex(color) {
     const colors = {
       red: '#ff6b6b',      // Coral red
       blue: '#4ecdc4',     // Teal blue
