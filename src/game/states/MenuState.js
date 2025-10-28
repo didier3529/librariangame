@@ -30,7 +30,7 @@ export class MenuState extends State {
     // Create and setup video if not already created
     if (!this.video) {
       this.video = document.createElement('video');
-      this.video.src = '/menu_background.mp4';
+      this.video.src = '/663c315b-a8f1-405e-b642-1b893f35a314.mp4';
       this.video.loop = true;
       this.video.muted = true;
       this.video.autoplay = true;
