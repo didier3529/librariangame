@@ -93,3 +93,5 @@ jspm_packages/
 AppData/
 Local/
 Application Data/
+# Snyk Security Extension - AI Rules (auto-generated)
+.cursor\rules\snyk_rules.mdc
