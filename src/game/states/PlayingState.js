@@ -15,14 +15,14 @@ export class PlayingState extends State {
     this.shelves = [];
     this.particles = [];
     
-    // World bounds - minimal area just for volume block shelves
-    // Shelves: 8 cols, last shelf at x = 320 + 7*160 = 1440, shelf width = 64
-    // So rightmost edge = 1440 + 64 = 1504
-    // Shelves: 4 rows, last shelf at y = 240 + 3*200 = 840, shelf height = 96
-    // So bottommost edge = 840 + 96 = 936
-    // Add small buffer: 100 pixels on each side
-    this.worldWidth = 1600; // Just enough for shelves + small buffer
-    this.worldHeight = 1040; // Just enough for shelves + small buffer
+    // World bounds - adapted for 1920x1080 canvas
+    // Shelves: 10 cols, last shelf at x = 200 + 9*180 = 1820, shelf width = 64
+    // So rightmost edge = 1820 + 64 = 1884
+    // Shelves: 5 rows, last shelf at y = 200 + 4*180 = 920, shelf height = 96
+    // So bottommost edge = 920 + 96 = 1016
+    // Add buffer: 100 pixels on each side
+    this.worldWidth = 1920; // Full width for new canvas
+    this.worldHeight = 1080; // Full height for new canvas
     
     // Kid spawning
     this.kidSpawnTimer = 0;
@@ -51,12 +51,14 @@ export class PlayingState extends State {
     this.shelfSound = null;
     
     this.spawnPoints = [
-      { x: 400, y: 300 }, // Middle-left area - away from shelves but in center region
-      { x: 1200, y: 300 }, // Middle-right area - away from shelves but in center region
-      { x: 400, y: 700 }, // Middle-left bottom area - away from shelves but in center region
-      { x: 1200, y: 700 }, // Middle-right bottom area - away from shelves but in center region
-      { x: 800, y: 200 }, // Top center area - away from shelves but in center region
-      { x: 800, y: 800 } // Bottom center area - away from shelves but in center region
+      { x: 500, y: 400 }, // Middle-left area - away from shelves but in center region
+      { x: 1500, y: 400 }, // Middle-right area - away from shelves but in center region
+      { x: 500, y: 800 }, // Middle-left bottom area - away from shelves but in center region
+      { x: 1500, y: 800 }, // Middle-right bottom area - away from shelves but in center region
+      { x: 1000, y: 300 }, // Top center area - away from shelves but in center region
+      { x: 1000, y: 900 }, // Bottom center area - away from shelves but in center region
+      { x: 300, y: 600 }, // Far left area
+      { x: 1700, y: 600 } // Far right area
     ];
   }
   
@@ -180,12 +182,12 @@ export class PlayingState extends State {
     this.generateVolumeVaultLayout();
     
     // Create player in a safe spot between shelves
-    // Shelves now start at x:100, y:100 with 160x200 spacing
+    // Shelves now start at x:200, y:200 with 180x180 spacing
     // Place player in the aisle to the left of first shelf
     this.player = new Player(
       this.game,
-      50,  // Left edge buffer area
-      300  // Middle height of volume vault
+      100,  // Left edge buffer area
+      500   // Middle height of volume vault
     );
     
     // Set camera bounds to world
@@ -711,21 +713,21 @@ export class PlayingState extends State {
     // Define shelf colors
     const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
     
-    // Create a grid of shelves
-    const shelfSpacingX = 160;
-    const shelfSpacingY = 200;
-    const startX = 100; // Start closer to left edge
-    const startY = 100; // Start closer to top edge
-    const rows = 4;
-    const cols = 8;
+    // Create a grid of shelves - adapted for 1920x1080
+    const shelfSpacingX = 180; // Increased spacing for larger canvas
+    const shelfSpacingY = 180; // Increased spacing for larger canvas
+    const startX = 200; // Start further from left edge for better balance
+    const startY = 200; // Start further from top edge for better balance
+    const rows = 5; // More rows for larger canvas
+    const cols = 10; // More columns for larger canvas
     
     // Create color distribution array to ensure equal distribution
-    // 32 shelves / 6 colors = 5.33, so we need 5 of each color + 2 extra
+    // 50 shelves / 6 colors = 8.33, so we need 8 of each color + 2 extra
     const colorDistribution = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 8; i++) {
       colorDistribution.push(...colors);
     }
-    // Add 2 more to reach 32 total (we'll use red and blue for balance)
+    // Add 2 more to reach 50 total (we'll use red and blue for balance)
     colorDistribution.push('red', 'blue');
     
     // Shuffle the color distribution for variety
