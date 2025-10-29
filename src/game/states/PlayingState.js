@@ -127,14 +127,14 @@ export class PlayingState extends State {
     if (this.pickupSounds.length === 0) {
       // Create 5 audio instances for overlapping pickup sounds
       for (let i = 0; i < 5; i++) {
-        const audio = new Audio('/pickup_book.mp3');
+        const audio = new Audio('/pickup_volume_block.mp3');
         audio.volume = 0.7; // Increased from 0.5 for better audibility
         this.pickupSounds.push(audio);
       }
     }
     
     if (!this.shelfSound) {
-      this.shelfSound = new Audio('/book_on_shelf.mp3');
+      this.shelfSound = new Audio('/volume_block_on_shelf.mp3');
       this.shelfSound.volume = 0.6;
     }
   }
@@ -176,8 +176,8 @@ export class PlayingState extends State {
   }
   
   initializeLevel() {
-    // Generate library layout first
-    this.generateLibraryLayout();
+    // Generate volume vault layout first
+    this.generateVolumeVaultLayout();
     
     // Create player in a safe spot between shelves
     // Shelves now start at x:100, y:100 with 160x200 spacing
@@ -185,7 +185,7 @@ export class PlayingState extends State {
     this.player = new Player(
       this.game,
       50,  // Left edge buffer area
-      300  // Middle height of library
+      300  // Middle height of volume vault
     );
     
     // Set camera bounds to world
@@ -352,7 +352,7 @@ export class PlayingState extends State {
     const { width, height } = this.game;
     const gameData = this.game.gameData;
     
-    // Clear with library floor color
+    // Clear with volume vault floor color
     ctx.fillStyle = '#d4a574';
     ctx.fillRect(0, 0, width, height);
     
@@ -707,7 +707,7 @@ export class PlayingState extends State {
     }
   }
   
-  generateLibraryLayout() {
+  generateVolumeVaultLayout() {
     // Define shelf colors
     const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
     
