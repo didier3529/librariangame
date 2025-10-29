@@ -46,13 +46,13 @@
     }
     
     #social-buttons {
-      position: absolute;
-      top: -10px;
+      position: fixed;
+      top: 10px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
       gap: 25px;
-      z-index: 1000;
+      z-index: 10000;
     }
     
     .social-btn {
@@ -124,7 +124,7 @@
       
       <!-- Pump.fun Button -->
       <button class="social-btn pump" onclick="window.open('https://pump.fun/yourgame', '_blank')" aria-label="Visit on Pump.fun">
-        <img src="/pump-fun-logo.png" alt="Pump.fun" width="24" height="24" style="filter: brightness(0) invert(1);">
+        <img src="/pump-fun-logo.png" alt="Pump.fun" width="32" height="32" style="filter: brightness(0) invert(1);">
       </button>
     </div>
   </div>
