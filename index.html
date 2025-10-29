@@ -94,10 +94,7 @@
       filter: brightness(0) invert(1) hue-rotate(20deg);
     }
     
-    /* Hide social buttons during gameplay */
-    .playing .social-buttons {
-      display: none;
-    }
+    /* Social buttons stay visible during gameplay */
     
     .hidden {
       display: none !important;
@@ -132,28 +129,5 @@
     </div>
   </div>
   <script type="module" src="/src/main.js"></script>
-  <script>
-    // Hide social buttons when game starts playing
-    document.addEventListener('DOMContentLoaded', () => {
-      // Listen for game state changes
-      const gameContainer = document.getElementById('game-container');
-      const socialButtons = document.getElementById('social-buttons');
-      
-      // Hide social buttons when game starts
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-            if (gameContainer.classList.contains('playing')) {
-              socialButtons.style.display = 'none';
-            } else {
-              socialButtons.style.display = 'flex';
-            }
-          }
-        });
-      });
-      
-      observer.observe(gameContainer, { attributes: true });
-    });
-  </script>
 </body>
 </html>

@@ -93,11 +93,7 @@ export class Game {
       loadingEl.classList.add('hidden');
     }
     
-    // Add playing class to game container
-    const gameContainer = document.getElementById('game-container');
-    if (gameContainer) {
-      gameContainer.classList.add('playing');
-    }
+    // Game container ready for gameplay
     
     // Start with menu state
     this.stateManager.changeState('menu');
