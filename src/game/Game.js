@@ -17,8 +17,8 @@ export class Game {
     this.ctx = this.canvas.getContext('2d');
     
     // Set canvas size
-    this.width = 1600;
-    this.height = 900;
+    this.width = 1920;
+    this.height = 1080;
     this.setupCanvas();
     
     // Core systems
