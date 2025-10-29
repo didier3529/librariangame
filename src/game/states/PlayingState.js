@@ -110,7 +110,7 @@ export class PlayingState extends State {
     if (!this.bgMusic) {
       this.bgMusic = new Audio('/game_song.mp3');
       this.bgMusic.loop = true;
-      this.bgMusic.volume = 0.2; // Lower volume for background music
+      this.bgMusic.volume = 0.1; // 10% volume for background music
       
       this.bgMusic.addEventListener('loadeddata', () => {
         this.musicLoaded = true;

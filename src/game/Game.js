@@ -87,10 +87,16 @@ export class Game {
     // Initialize states
     await this.stateManager.init();
     
-    // Hide loading screen
+    // Hide loading screen and add playing class
     const loadingEl = document.getElementById('loading');
     if (loadingEl) {
       loadingEl.classList.add('hidden');
+    }
+    
+    // Add playing class to game container
+    const gameContainer = document.getElementById('game-container');
+    if (gameContainer) {
+      gameContainer.classList.add('playing');
     }
     
     // Start with menu state
